@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, redirect,url_for
+from flask import Flask, jsonify, request, render_template, redirect,url_for,session
 import jwt
 import datetime
 import mysql.connector
@@ -9,7 +9,7 @@ from flask import send_from_directory
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret_key'
+app.config['SECRET_KEY'] = 'mysecretkey'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB
@@ -92,10 +92,16 @@ def login():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
         }, app.config['SECRET_KEY'])
 
-        return redirect('/upload')
+        # Store username in session
+        session['username'] = user.username
+
+        # Redirect to upload_file() and pass username
+        return redirect(url_for('upload_file', username=user.username))
     
     # Serve login page
     return render_template('login.html')
+
+
 
 # Protected route
 @app.route('/protected')
@@ -121,8 +127,15 @@ def get_file_extension(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower()
 
-@app.route('/upload', methods=['POST','GET'])
-def upload_file():
+# Upload file route
+@app.route('/upload/<username>', methods=['POST','GET'])
+def upload_file(username):
+    # Check if user is logged in
+    if 'username' not in session:
+        return redirect('/login')
+    if session['username'] != username:
+        return jsonify({'message': 'Invalid username'}), 401
+
     if request.method == 'POST':
         # check if the post request has the file part
         print(request.files)
@@ -141,8 +154,7 @@ def upload_file():
             return jsonify({'message': 'File uploaded successfully'})
         else:
             return jsonify({'message': 'File type not allowed'}), 400
-    return render_template('upload.html')
-
+    return render_template('upload.html', username=username)
 
 # Public endpoint
 @app.route('/public')
