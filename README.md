@@ -1,5 +1,7 @@
 # 449_midProject
 
+name: xuzhihui
+
 under the github project there is a zip file
 download the zip file and unzip the file
 
