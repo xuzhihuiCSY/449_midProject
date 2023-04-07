@@ -3,9 +3,7 @@ import jwt
 import datetime
 import mysql.connector
 import os
-import uuid
 from werkzeug.utils import secure_filename
-from flask import send_from_directory
 
 
 app = Flask(__name__)
@@ -58,22 +56,30 @@ def internal_server_error(error):
 
 # User model
 class User:
-    def __init__(self, username, password):
+    def __init__(self, id, username, password):
+        self.id = id
         self.username = username
         self.password = password
 
-# Sample user data
-users = [
-    User('user1', 'password1'),
-    User('user2', 'password2')
-]
-
-# Authentication function
+# Authentication function (now querying the database)
 def authenticate(username, password):
-    for user in users:
-        if user.username == username and user.password == password:
-            return user
+    user = get_user_by_username(username)
+    if user and user.password == password:
+        return user
 
+# Function to query the database and retrieve the user based on the username
+def get_user_by_username(username):
+    cursor = mydb.cursor(dictionary=True)
+    query = "SELECT * FROM users WHERE username = %s"
+    cursor.execute(query, (username,))
+    row = cursor.fetchone()
+    cursor.close()
+
+    if row:
+        return User(row['id'], row['username'], row['password'])
+    else:
+        return None
+    
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -88,7 +94,7 @@ def login():
 
         # Generate JWT token
         token = jwt.encode({
-            'user_id': user.username,
+            'user_id': user.id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
         }, app.config['SECRET_KEY'])
 
