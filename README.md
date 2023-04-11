@@ -29,3 +29,7 @@ endpoint:
 endpoint in post:
 
 ![屏幕截图 2023-04-04 081728](https://user-images.githubusercontent.com/100057470/229839161-621770c5-bbab-4f9c-90c8-01f5599c58ee.png)
+
+POSTMAN:
+![image](https://user-images.githubusercontent.com/100057470/231084384-4c934bd3-a79e-4e95-9788-f0c0b144948c.png)
+
