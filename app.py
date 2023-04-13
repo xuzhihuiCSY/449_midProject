@@ -3,7 +3,9 @@ import jwt
 import datetime
 import mysql.connector
 import os
+import uuid
 from werkzeug.utils import secure_filename
+from flask import send_from_directory
 
 
 app = Flask(__name__)
@@ -17,7 +19,7 @@ public_items = ['public_item1', 'public_item2', 'public_item3']
 mydb = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="root",
+    password="",
     database="449_DB"
 )
 
@@ -56,30 +58,22 @@ def internal_server_error(error):
 
 # User model
 class User:
-    def __init__(self, id, username, password):
-        self.id = id
+    def __init__(self, username, password):
         self.username = username
         self.password = password
 
-# Authentication function (now querying the database)
+# Sample user data
+users = [
+    User('user1', 'password1'),
+    User('user2', 'password2')
+]
+
+# Authentication function
 def authenticate(username, password):
-    user = get_user_by_username(username)
-    if user and user.password == password:
-        return user
+    for user in users:
+        if user.username == username and user.password == password:
+            return user
 
-# Function to query the database and retrieve the user based on the username
-def get_user_by_username(username):
-    cursor = mydb.cursor(dictionary=True)
-    query = "SELECT * FROM users WHERE username = %s"
-    cursor.execute(query, (username,))
-    row = cursor.fetchone()
-    cursor.close()
-
-    if row:
-        return User(row['id'], row['username'], row['password'])
-    else:
-        return None
-    
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -94,15 +88,15 @@ def login():
 
         # Generate JWT token
         token = jwt.encode({
-            'user_id': user.id,
+            'user_id': user.username,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
-        }, app.config['SECRET_KEY'])
+        }, app.config['SECRET_KEY'], algorithm='HS256')
 
         # Store username in session
         session['username'] = user.username
 
         # Redirect to upload_file() and pass username
-        return redirect(url_for('upload_file', username=user.username))
+        return jsonify({"access_token": token})
     
     # Serve login page
     return render_template('login.html')
@@ -118,8 +112,11 @@ def protected():
 
     # Decode token
     try:
-        token = token.split(' ')[1]
-        data = jwt.decode(token, app.config['SECRET_KEY'])
+        token = token.split()[1]
+        print(token)
+        data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        print(data)
+        
     except:
         return jsonify({'message': 'Invalid token'}), 401
 
